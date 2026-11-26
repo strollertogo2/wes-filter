@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wes Filter</title>
+<style>
+  :root {
+    --bg: #0f0f12;
+    --surface: #1a1a22;
+    --border: #2e2e3a;
+    --text: #f0f0f5;
+    --muted: #9a9aa8;
+    --accent: #7c6af7;
+    --accent-hover: #9b8cff;
+    --success: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 1.25rem 1.5rem 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .controls {
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  label {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  select {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    min-width: 180px;
+    cursor: pointer;
+  }
+  select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1rem 1.25rem 2rem;
+    gap: 1rem;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 180px;
+  }
+  .panel-header {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  textarea, .output {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 1rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    resize: none;
+    font-family: inherit;
+  }
+  textarea:focus {
+    outline: none;
+  }
+  .output {
+    white-space: pre-wrap;
+    overflow-y: auto;
+    color: #e8e8f0;
+  }
+  .output:empty::before {
+    content: "Wes is waiting...";
+    color: var(--muted);
+    font-style: italic;
+  }
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 0.75rem;
+    justify-content: flex-end;
+  }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover {
+    background: var(--accent-hover);
+  }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  button.secondary:hover {
+    background: #252530;
+  }
+  button.copied {
+    background: var(--success);
+  }
+  footer {
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 700px) {
+    .app {
+      flex-direction: row;
+    }
+    .panel {
+      min-height: 320px;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Wes Filter</h1>
+  <p>Type what you really mean. Get what you can actually say.</p>
+</header>
+
+<div class="controls">
+  <label for="mode">Wes Mode:</label>
+  <select id="mode">
+    <option value="mild">Mild Wes</option>
+    <option value="full" selected>Full Wes</option>
+    <option value="sarcastic">Sarcastic Wes</option>
+    <option value="corporate">Corporate Wes</option>
+    <option value="caffeine">Caffeine Wes</option>
+    <option value="minimal">Minimal Wes</option>
+  </select>
+  <button id="translateBtn">Filter It</button>
+</div>
+
+<div class="app">
+  <div class="panel">
+    <div class="panel-header">What you really want to say</div>
+    <textarea id="input" placeholder="Type the unfiltered version here..." autofocus></textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Wes says</span>
+      <button id="copyBtn" class="secondary" style="padding: 0.3rem 0.7rem; font-size: 0.8rem;">Copy</button>
+    </div>
+    <div id="output" class="output"></div>
+  </div>
+</div>
+
+<footer>
+  A gag app. The real Wes still has better judgment than this.
+</footer>
+
+<script>
+const input = document.getElementById('input');
+const output = document.getElementById('output');
+const modeSelect = document.getElementById('mode');
+const translateBtn = document.getElementById('translateBtn');
+const copyBtn = document.getElementById('copyBtn');
+
+// Stronger, more intelligent rephrasing
+const filters = {
+  mild: (text) => rephrase(text, 'mild'),
+  full: (text) => rephrase(text, 'full'),
+  sarcastic: (text) => rephrase(text, 'sarcastic'),
+  corporate: (text) => rephrase(text, 'corporate'),
+  caffeine: (text) => rephrase(text, 'caffeine'),
+  minimal: (text) => rephrase(text, 'minimal')
+};
+
+function rephrase(original, mode) {
+  const text = original.trim();
+  if (!text) return '';
+
+  // Core intent detection + rewriting
+  const lower = text.toLowerCase();
+
+  // Strong personal / hostile patterns
+  if (/\b(disappear|go away|fuck off|get lost|leave me alone|shut up|die|kill yourself)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "I think we should probably wrap this up.",
+      full: "I should probably head out. Appreciate you taking the time.",
+      sarcastic: "This has been great. We should do it again never.",
+      corporate: "I need to step away to address another priority. Thank you for your input.",
+      caffeine: "Yeah I'm done with this. Peace.",
+      minimal: "I should go."
+    });
+  }
+
+  if (/\b(idiot|moron|dumbass|stupid) (idea|suggestion|plan|take)\b/.test(lower) || 
+      /\b(that|your|the) (idea|suggestion) is (idiot|stupid|dumb|garbage|trash|shit)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "I'm not sure that approach is going to land the way we want.",
+      full: "I have some concerns about that direction. Can we look at a couple alternatives?",
+      sarcastic: "That's certainly a creative approach. Very creative.",
+      corporate: "I'd like to explore other options that might better align with our objectives.",
+      caffeine: "I don't think that idea works. At all.",
+      minimal: "Not sure about that idea."
+    });
+  }
+
+  if (/\b(i wish you would|i hope you|you should just)\b/.test(lower) && /\b(disappear|die|leave|go away|shut up)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "I think it might be better if we pause here.",
+      full: "I'm going to step away for a bit. Thanks for the conversation.",
+      sarcastic: "Great chat. Truly unforgettable.",
+      corporate: "I'll need to circle back on this at a later time.",
+      caffeine: "I'm tapping out. This isn't productive.",
+      minimal: "Let's pause."
+    });
+  }
+
+  if (/\b(this (meeting|call)|meeting) is (a )?(waste|pointless|useless|stupid)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "I think we could tighten this up a bit.",
+      full: "Should we check if we can cover the key points more efficiently?",
+      sarcastic: "This is clearly the most productive use of everyone's time today.",
+      corporate: "I'd like to explore opportunities to optimize our time allocation in this session.",
+      caffeine: "Can we please just get to the point already?!",
+      minimal: "Can we wrap this faster?"
+    });
+  }
+
+  if (/\b(your idea|this idea|that idea|the idea) is (bad|stupid|dumb|terrible|awful|garbage|shit)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "I have some concerns about that approach.",
+      full: "I see where you're coming from. I might have a different take once we look at the constraints.",
+      sarcastic: "That's one way to do it. Bold choice.",
+      corporate: "I appreciate the proposal. I'd like to understand the assumptions and risks more fully before we proceed.",
+      caffeine: "I'm not seeing how this works. At all.",
+      minimal: "Not sure about that one."
+    });
+  }
+
+  if (/\b(i hate|i don't like|can't stand) (you|this|him|her|them|that)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "This isn't really my thing.",
+      full: "I should probably get going soon.",
+      sarcastic: "We should do this again sometime. Or not. Both are fine.",
+      corporate: "I need to step away to handle another priority.",
+      caffeine: "Yeah I'm gonna bounce. This isn't it.",
+      minimal: "I should head out."
+    });
+  }
+
+  if (/\b(shut up|stop talking|let me talk|let me finish)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "Can I jump in with one thing?",
+      full: "I'd like to add a quick thought before we move on.",
+      sarcastic: "Sorry, I just have one tiny, completely unrelated point.",
+      corporate: "If I may, I'd like to contribute a perspective here.",
+      caffeine: "Hold on, I need to say something.",
+      minimal: "Quick thought?"
+    });
+  }
+
+  if (/\b(this (food|place|restaurant)|the food) (is|tastes) (terrible|awful|bad|gross|disgusting)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "It's not really my thing.",
+      full: "I'm not the biggest fan of this one.",
+      sarcastic: "Interesting texture. Very... intentional.",
+      corporate: "The culinary experience doesn't fully align with my preferences.",
+      caffeine: "This is not good. At all.",
+      minimal: "Not for me."
+    });
+  }
+
+  if (/\b(i don't care|whatever|doesn't matter)\b/.test(lower)) {
+    return modeMap(mode, {
+      mild: "I'm flexible on this.",
+      full: "Happy to go either way.",
+      sarcastic: "Sure. Whatever you think is best. Obviously.",
+      corporate: "I'm aligned with the group's preference here.",
+      caffeine: "I literally do not care. You pick.",
+      minimal: "Either way."
+    });
+  }
+
+  // Generic softening based on negative words (only if no strong pattern matched)
+  const negativeWords = [
+    [/hate/gi, {mild: "don't love", full: "am not particularly fond of", sarcastic: "have complex feelings about", corporate: "have reservations regarding", caffeine: "HATE", minimal: "don't like"}],
+    [/stupid|dumb|idiot|moron/gi, {mild: "not ideal", full: "questionable", sarcastic: "certainly a choice", corporate: "suboptimal", caffeine: "dumb as hell", minimal: "bad"}],
+    [/terrible|awful|horrible|worst/gi, {mild: "not great", full: "challenging", sarcastic: "memorable", corporate: "not meeting expectations", caffeine: "terrible", minimal: "bad"}],
+    [/sucks|garbage|trash|shit/gi, {mild: "isn't my favorite", full: "has room for improvement", sarcastic: "is doing its best", corporate: "requires further development", caffeine: "sucks", minimal: "meh"}],
+    [/boring/gi, {mild: "low energy", full: "could use more engagement", sarcastic: "riveting", corporate: "lacks dynamism", caffeine: "boring", minimal: "dull"}],
+    [/waste of time/gi, {mild: "could be more efficient", full: "might benefit from a tighter agenda", sarcastic: "time well spent", corporate: "an opportunity to refine our process", caffeine: "a waste", minimal: "slow"}],
+  ];
+
+  let result = text;
+  let changed = false;
+
+  for (const [regex, replacements] of negativeWords) {
+    if (regex.test(result)) {
+      result = result.replace(regex, replacements[mode] || replacements.full);
+      changed = true;
+    }
+  }
+
+  // Only add soft framing if the result is no longer hostile
+  const stillHostile = /\b(disappear|die|fuck|shit|idiot|moron|hate you|kill)\b/i.test(result);
+
+  if (mode === 'full' && changed && !stillHostile) {
+    result = "I appreciate the perspective. " + result;
+  } else if (mode === 'corporate' && !stillHostile) {
+    result = "From a collaborative standpoint, " + result.toLowerCase();
+  } else if (mode === 'sarcastic' && !changed) {
+    result = "Love the directness. " + result;
+  } else if (mode === 'caffeine') {
+    result = result.replace(/\./g, '!!').replace(/!/g, '!!');
+    if (!result.endsWith('!')) result += '!!';
+  } else if (mode === 'minimal') {
+    const words = result.split(/\s+/);
+    result = words.slice(0, Math.min(8, Math.ceil(words.length * 0.5))).join(' ');
+    if (words.length > 8) result += '...';
+  }
+
+  // Clean up
+  result = result.replace(/\s+/g, ' ').trim();
+  if (!/[.!?]$/.test(result)) result += '.';
+
+  return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+function modeMap(mode, map) {
+  return map[mode] || map.full;
+}
+
+function translate() {
+  const text = input.value.trim();
+  if (!text) {
+    output.textContent = '';
+    return;
+  }
+  const mode = modeSelect.value;
+  const filtered = filters[mode](text);
+  output.textContent = filtered;
+}
+
+translateBtn.addEventListener('click', translate);
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    translate();
+  }
+});
+
+copyBtn.addEventListener('click', async () => {
+  const text = output.textContent;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => {
+      copyBtn.textContent = original;
+      copyBtn.classList.remove('copied');
+    }, 1500);
+  } catch (err) {
+    const range = document.createRange();
+    range.selectNodeContents(output);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    copyBtn.textContent = 'Copied!';
+  }
+});
+
+modeSelect.addEventListener('change', () => {
+  if (input.value.trim()) translate();
+});
+</script>
+</body>
+</html>
