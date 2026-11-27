@@ -190,121 +190,238 @@ const modeSelect = document.getElementById('mode');
 const translateBtn = document.getElementById('translateBtn');
 const copyBtn = document.getElementById('copyBtn');
 
-function rephrase(original, mode) {
-  const text = original.trim();
-  if (!text) return '';
-  const lower = text.toLowerCase();
-
-  // Profanity / strong frustration
-  if (/\b(what the fuck|what the hell|wtf|are you fucking|the fuck|fucking)\b/.test(lower)) {
-    return pick(mode, {
-      mild: "I'm not sure I follow.",
-      full: "Can you help me understand what you mean?",
-      sarcastic: "That's certainly one way to put it.",
-      corporate: "I'd like to clarify the intent here.",
-      caffeine: "I'm confused. What are we doing?",
-      minimal: "Not following."
-    });
+// ===== Wes's lines. Edit these to make him sound like the real Wes. =====
+const REPLIES = {
+  brushoff: {
+    mild: ["I think we should probably wrap this up.", "Let's pick this up another time.", "I'm going to take a little breather."],
+    full: ["I should head out. Appreciate you taking the time.", "I'm going to step away for a bit. Talk soon.", "I think a little space would do us both some good."],
+    sarcastic: ["This has been great. We should do it again never.", "I'd love to stay, but I'd also love to leave.", "Please don't let me keep you. Really. Please."],
+    corporate: ["I need to step away to address another priority. Thank you.", "I propose we adjourn and revisit at a later date.", "I have a hard stop, effective immediately."],
+    caffeine: ["Yeah I'm done with this. Bye!", "Gotta go, gotta go, gotta go!", "Love that for us. Leaving now!"],
+    minimal: ["I should go.", "Later.", "Heading out."]
+  },
+  silence: {
+    mild: ["Can I jump in with one thing?", "Mind if I finish my thought?", "Could we pause for just a second?"],
+    full: ["I'd like to add a quick thought before we move on.", "Let me finish this one, then I'm all ears.", "Can we take turns for a minute? I want to hear you after this."],
+    sarcastic: ["Sorry, did my sentence interrupt yours?", "Wonderful stuff. May I have a turn?", "No, keep going. I only had the one point."],
+    corporate: ["If I may, I'd like to contribute a perspective here.", "Let's make sure everyone has airtime.", "I'd like to hold the floor briefly."],
+    caffeine: ["Hold on hold on, my turn!", "Wait wait, I need to say something!", "Pause! Thought incoming!"],
+    minimal: ["Quick thought?", "One sec.", "May I?"]
+  },
+  meeting: {
+    mild: ["I think we could tighten this up a bit.", "Maybe we can keep this one short.", "Are we close to the finish line?"],
+    full: ["Should we check if we can cover the key points more efficiently?", "What do we still need to decide before we wrap?", "Could the rest of this go in a quick follow-up note?"],
+    sarcastic: ["This is clearly the best use of everyone's time today.", "I hope we schedule a meeting to discuss this meeting.", "Riveting. I may never email again."],
+    corporate: ["I'd like to explore opportunities to optimize our time here.", "Can we align on next steps and give people time back?", "Let's take the remaining items offline."],
+    caffeine: ["Can we just get to the point?", "Action items! Now! Please!", "Could this be an email? Let's make it an email!"],
+    minimal: ["Can we wrap?", "Next steps?", "Email instead?"]
+  },
+  insult: {
+    mild: ["I think we're seeing this very differently.", "I'm a little frustrated, so give me a minute.", "That didn't go how I expected."],
+    full: ["I'm having a hard time with this. Can we reset?", "I think there may be a disconnect here. Can we talk it through?", "Let me take a breath before I respond to that."],
+    sarcastic: ["You're certainly one of a kind.", "I admire your confidence. Truly.", "Never change. Or maybe a little."],
+    corporate: ["I see an opportunity for some alignment here.", "I'd welcome a conversation about expectations.", "Let's circle back once we've both had time to reflect."],
+    caffeine: ["Okay! Wow! Moving on!", "Deep breath! Big deep breath!", "I have feelings and they're all loud!"],
+    minimal: ["Hm.", "Let's reset.", "Interesting."]
+  },
+  badIdea: {
+    mild: ["I'm not sure that approach is going to land the way we want.", "I might want to think that one over.", "I have a small hesitation about that."],
+    full: ["I have some concerns about that direction. Mind if we look at a couple alternatives?", "Can we pressure-test that before we commit?", "I see where you're headed, but I'd like to weigh another option."],
+    sarcastic: ["That's one way to do it. Bold choice.", "What a brave thing to say out loud.", "Let's file that one somewhere very safe and far away."],
+    corporate: ["I'd like to explore options that better align with our objectives.", "Let's park that and evaluate alternatives.", "I'm not sure we have buy-in on that approach yet."],
+    caffeine: ["Nope, don't think that works! Next idea!", "Ooh, pass! What else have we got?", "Let's brainstorm again, fast!"],
+    minimal: ["Not sure about that.", "Other options?", "Maybe not."]
+  },
+  food: {
+    mild: ["It's not really my thing.", "It's a little different from what I expected.", "I think I'm good for now."],
+    full: ["I'm not the biggest fan of this one.", "I might try somewhere else next time.", "It's not my favorite, but I appreciate the pick."],
+    sarcastic: ["Interesting texture. Very... intentional.", "You can really taste the decisions.", "I'll be thinking about this meal for all the wrong reasons."],
+    corporate: ["The experience doesn't fully align with my preferences.", "I see room for improvement in the culinary deliverables.", "I'd suggest we evaluate other vendors for lunch."],
+    caffeine: ["This is not good! Coffee instead?", "Nope! Snack run!", "My taste buds filed a complaint!"],
+    minimal: ["Not for me.", "I'll pass.", "I'm full."]
+  },
+  indifferent: {
+    mild: ["I'm flexible on this.", "I don't have a strong preference.", "Either option works for me."],
+    full: ["Happy to go either way.", "I'll defer to you on this one.", "Whatever works best for you works for me."],
+    sarcastic: ["Sure. Whatever you think is best. Obviously.", "I'm on the edge of my seat, either way.", "Surprise me. I can barely contain myself."],
+    corporate: ["I'm aligned with the group's preference here.", "I'll support whichever direction the team selects.", "No objections from my side."],
+    caffeine: ["You pick! Quick!", "Any of them! All of them! Go!", "Coin flip! Let's move!"],
+    minimal: ["Either way.", "Your call.", "Sure."]
+  },
+  disagree: {
+    mild: ["I see it a little differently.", "I'm not sure I follow that.", "I had a different understanding."],
+    full: ["I might have a different take on this. Can I share it?", "Can you walk me through how you got there?", "I'm not quite with you on that one yet."],
+    sarcastic: ["Interesting perspective. Not the one I have, but interesting.", "Fascinating. Where did you find that one?", "I love how sure you sound."],
+    corporate: ["I'd like to offer an alternative viewpoint for consideration.", "Let's validate that assumption before proceeding.", "My data points in a slightly different direction."],
+    caffeine: ["Hmm, nope, don't think so!", "Wait, what? Let's double-check that!", "Gonna push back on that one!"],
+    minimal: ["I see it differently.", "Not quite.", "You sure?"]
+  },
+  dislike: {
+    mild: ["This isn't really my thing.", "I'm not completely sold.", "I could take it or leave it."],
+    full: ["I'm not the biggest fan, to be honest.", "This one's not for me, but I get the appeal.", "I'd probably go a different way if it were up to me."],
+    sarcastic: ["Oh, my favorite. Right after paper cuts.", "I'm feeling so many things, and joy isn't one.", "We should do this again sometime. Or not. Both are fine."],
+    corporate: ["This doesn't fully align with my preferences.", "I have some reservations I'd like to note.", "I'd welcome the chance to explore other options."],
+    caffeine: ["Yeah, not into it!", "Hard pass! Friendly pass, but hard!", "Can we do literally anything else?"],
+    minimal: ["Not my thing.", "Pass.", "Meh."]
+  },
+  compliment: {
+    mild: ["That's nice.", "Good stuff.", "I like where that landed."],
+    full: ["Really nice work. I appreciate it.", "That turned out great. Well done.", "I'm impressed. Thanks for putting that in."],
+    sarcastic: ["Look at you, being all competent.", "Great. Now we'll all expect this every time.", "I'm not crying. You're just doing well."],
+    corporate: ["Excellent contribution. This adds real value.", "Strong deliverable. Thank you for your efforts.", "I'd like to recognize the quality of this work."],
+    caffeine: ["Yes!! Love it!!", "Amazing! High five! Both hands!", "Nailed it! Do it again!"],
+    minimal: ["Nice.", "Good work.", "Solid."]
+  },
+  frustrated: {
+    mild: ["I'm a bit confused by this.", "Well, that's unexpected.", "Give me a second with this one."],
+    full: ["Can you help me understand what's going on here?", "This is a frustrating one. Can we work through it?", "I need a minute, then let's figure it out."],
+    sarcastic: ["That's certainly one way for things to go.", "Oh good. This again.", "Couldn't have planned it better myself."],
+    corporate: ["I'd like to flag a challenge we've encountered.", "This presents a learning opportunity.", "Let's escalate this appropriately."],
+    caffeine: ["What is happening?! Okay! Fixing it!", "Nope nope nope! Regroup!", "I'm fine! Totally fine! Mostly!"],
+    minimal: ["Oh boy.", "Not ideal.", "Hm."]
+  },
+  fallback: {
+    mild: ["Let me think about that.", "That's something to consider.", "I hear you.", "Could be."],
+    full: ["That's a fair thing to bring up. Let me give it some thought.", "I appreciate you sharing that.", "Good to know. Can we come back to it?", "I can see why that's on your mind."],
+    sarcastic: ["Wow. Tell me absolutely everything.", "And you came to me with this. I'm honored.", "Noted, in my finest imaginary notebook.", "What a time to be alive."],
+    corporate: ["Thank you for surfacing that.", "Let's circle back on this.", "I'll take that under advisement.", "Noted. I'll follow up as appropriate."],
+    caffeine: ["Yep! Got it! Moving!", "Love it, noted, next!", "Okay! Cool! What else?", "Sure thing! Zoom zoom!"],
+    minimal: ["Noted.", "Got it.", "Okay.", "Sure."]
   }
+};
 
-  if (/\bfuck\b/.test(lower)) {
-    return pick(mode, {
-      mild: "This is frustrating.",
-      full: "I'm finding this difficult.",
-      sarcastic: "Well this is going great.",
-      corporate: "This presents some challenges.",
-      caffeine: "This is not going well.",
-      minimal: "This is rough."
-    });
-  }
+// Shown instead of a joke if the text sounds like real self-harm.
+const SERIOUS = "No joke for this one. If you're thinking about hurting yourself, call or text 988 (US) or reach out to someone you trust right now.";
 
-  // Strong patterns
-  if (/\b(disappear|go away|fuck off|get lost|leave me alone|shut up|die)\b/.test(lower)) {
-    return pick(mode, {
-      mild: "I think we should probably wrap this up.",
-      full: "I should probably head out. Appreciate the time.",
-      sarcastic: "This has been great. We should do it again never.",
-      corporate: "I need to step away to address another priority.",
-      caffeine: "Yeah I'm done. Peace.",
-      minimal: "I should go."
-    });
-  }
+// ===== Matching rules =====
+const NEG = "(?:idiotic|stupid|dumb|moronic|garbage|trash|shit|shitty|terrible|awful|horrible|bad|worst|ridiculous|crap|crappy|pointless|useless|lousy)";
+const NOUN = "(?:idea|suggestion|plan|take|approach|proposal)";
+const POS = "(?:great|amazing|awesome|excellent|fantastic|good|nice|brilliant|perfect|wonderful|incredible|outstanding)";
+const INS = "(?:idiots?|morons?|dumbass(?:es)?|stupid|dumb|jerks?|assholes?|useless|annoying|ridiculous|clueless|incompetent|losers?|the worst)";
+const LEAD = "^(?:(?:please|oh|hey|ok|okay|now|seriously|dude|man|bro|and|can you|could you|will you|would you|why don't you|you can|you should|you need to|go ahead and) )*";
 
-  if (/\b(idiot|stupid|dumb|moron|dumbass) (idea|suggestion|plan)\b/.test(lower) ||
-      /\b(idea|suggestion) is (idiot|stupid|dumb|garbage|shit)\b/.test(lower)) {
-    return pick(mode, {
-      mild: "I'm not sure that approach is going to work.",
-      full: "I have some concerns about that direction. Can we look at alternatives?",
-      sarcastic: "That's certainly a creative approach. Very creative.",
-      corporate: "I'd like to explore other options that might better align with our objectives.",
-      caffeine: "I don't think that idea works.",
-      minimal: "Not sure about that idea."
-    });
-  }
+const rx = (source) => new RegExp(source);
 
-  if (/\b(meeting|call) is (a )?(waste|pointless|useless|stupid)\b/.test(lower)) {
-    return pick(mode, {
-      mild: "I think we could tighten this up a bit.",
-      full: "Should we check if we can cover the key points more efficiently?",
-      sarcastic: "This is clearly the most productive use of everyone's time today.",
-      corporate: "I'd like to explore opportunities to optimize our time allocation.",
-      caffeine: "Can we just get to the point?",
-      minimal: "Can we wrap this faster?"
-    });
-  }
+// Checked top to bottom. The first category that matches any part of the text wins.
+const RULES = [
+  ["brushoff", [
+    rx(LEAD + "(?:go away|get lost|fuck off|piss off|screw you|fuck you|leave me alone|go die|drop dead|kill yourself|disappear)\\b"),
+    rx(LEAD + "get out(?: of (?:here|my \\w+))?(?: now| please)?$"),
+    /\bi (?:wish|hope) you(?:'d| would| will)? (?:disappear|die|leave|go away)\b/
+  ]],
+  ["silence", [
+    rx(LEAD + "(?:shut up(?! and take)|shut it|stop talking|stop interrupting|be quiet|zip it|let me (?:talk|speak|finish))\\b"),
+    rx(LEAD + "quiet(?: down)?(?: please)?$"),
+    /\byou talk too much\b/
+  ]],
+  ["meeting", [
+    /\b(?:meeting|call|zoom)\b.{0,20}?(?:\b(?:is|was)|'s) (?:a )?(?:waste|pointless|useless|stupid|dumb|boring|too long)\b/,
+    /\b(?:meeting|call|zoom) sucks\b/,
+    /(?<!(?:not|n't) (?:a )?)\bwaste of (?:my |our |everyone's |everybody's )?time\b/,
+    /\bcould(?:'ve| have) been an email\b/,
+    /\bi (?:hate|can't stand) (?:this|these) (?:meetings?|calls?)\b/
+  ]],
+  ["insult", [
+    rx("\\b(?:you|you're|you look|you sound|he's|she's|they're|he is|she is|they are) (?:a |an |such a |such an |being )?" + INS + "\\b"),
+    rx("\\b(?:what an?|bunch of) (?:idiots?|morons?|jerks?|assholes?|losers?)\\b"),
+    /^(?:you )?(?:idiot|moron|dumbass|asshole)s?$/
+  ]],
+  ["badIdea", [
+    rx("(?<!not (?:a |an )?)\\b" + NEG + " " + NOUN + "\\b"),
+    rx("\\b" + NOUN + "(?: is|'s| was| sounds| seems) (?:a |an )?(?:" + NEG + "|joke)\\b"),
+    rx("\\b" + NOUN + " (?:sucks|stinks)\\b"),
+    rx("(?:\\bnot|n't) (?:a |the )?(?:good|great|best|smart) " + NOUN + "\\b"),
+    rx("\\b" + NOUN + "(?: is not| isn't|'s not| wasn't) (?:very )?(?:good|great|smart)\\b"),
+    rx("\\bi (?:hate|don't like|can't stand|don't love) (?:this|that|your|the|his|her|their) (?:new )?" + NOUN + "\\b")
+  ]],
+  ["food", [
+    rx("\\b(?:food|meal|restaurant|place|dinner|lunch|breakfast|coffee|dish|pizza|burger)\\b.{0,15}?(?:(?:\\b(?:is|was|tastes|tasted|smells)|'s) (?:like )?(?:" + NEG + "|gross|disgusting|nasty)\\b|\\bsuck(?:s|ed)\\b)"),
+    rx("\\b(?:this|it) (?:tastes|tasted|smells) (?:like )?(?:" + NEG + "|gross|disgusting|nasty)\\b")
+  ]],
+  ["indifferent", [
+    /\bi (?:don't|do not) care\b(?! for)/,
+    /\bcouldn't care less\b/,
+    /\bdon't give a (?:shit|damn|fuck|crap)\b/,
+    /\b(?:doesn't matter|who cares|not my problem)\b/,
+    /^(?:ok |okay |yeah |eh )?whatever$/
+  ]],
+  ["disagree", [
+    /\b(?:you're|that's|this is|it's) (?:wrong|stupid|dumb|ridiculous|nonsense|bullshit|bs|not (?:right|true|correct))\b/,
+    /\bi disagree\b/,
+    /\b(?:makes no sense|doesn't make (?:any )?sense)\b/,
+    /\bdon't know what you're talking about\b/,
+    /^bullshit$/
+  ]],
+  ["dislike", [
+    /\bi (?:hate|can't stand|despise|loathe|don't like|don't love|don't care for) \w+/,
+    /\bi'm (?:sick|tired) of \w+/,
+    /\b(?:this|that|it) (?:sucks|stinks)\b/,
+    rx("\\b(?:this|that|it)(?: is|'s| was) (?:" + NEG + "|boring|not (?:good|great))\\b")
+  ]],
+  ["compliment", [
+    /\bnot (?:a )?bad\b/,
+    rx("\\b(?:you're|you are|you were|you look|that's|this is|it's|that was|it was) (?:a |an )?" + POS + "\\b"),
+    rx("^(?!(?:is|are|was|would|do|does|did|can|could|should|if|how is)\\b).*?(?<!(?:\\bnot|n't|\\bno) (?:a |an )?)\\b" + POS + " (?:job|work|idea|call|plan|point)\\b"),
+    rx("\\b(?:your|that|this|the) (?:idea|plan|work|food|meal) (?:is|was) " + POS + "\\b"),
+    /\bi (?:love|loved|like|liked) (?:you|this|that|it|your)\b/,
+    /^(?:love it|well done|way to go)\b/
+  ]],
+  ["frustrated", [
+    /\b(?:fuck\w*|shit\w*|wtf|what the hell|bullshit|damn it|dammit|crap|are you kidding)\b/
+  ]]
+];
 
-  if (/\b(i hate|don't like|can't stand)\b/.test(lower)) {
-    return pick(mode, {
-      mild: "This isn't really my thing.",
-      full: "I should probably get going soon.",
-      sarcastic: "We should do this again sometime. Or not.",
-      corporate: "I need to step away to handle another priority.",
-      caffeine: "Yeah I'm gonna bounce.",
-      minimal: "I should head out."
-    });
-  }
+const SELF_HARM = /\b(?:kill(?:ing)? myself|end(?:ing)? my (?:own )?life|hurt(?:ing)? myself|i (?:want|need) to die|don't want to (?:live|be alive)|i'm suicidal)\b/;
 
-  if (/\b(shut up|stop talking|let me talk|let me finish)\b/.test(lower)) {
-    return pick(mode, {
-      mild: "Can I jump in with one thing?",
-      full: "I'd like to add a quick thought before we move on.",
-      sarcastic: "Sorry, I just have one tiny point.",
-      corporate: "If I may, I'd like to contribute a perspective.",
-      caffeine: "Hold on, I need to say something.",
-      minimal: "Quick thought?"
-    });
-  }
-
-  // Generic softening
-  let result = text;
-  result = result.replace(/\bhate\b/gi, "don't love");
-  result = result.replace(/\bstupid\b|\bdumb\b|\bidiot\b/gi, "not ideal");
-  result = result.replace(/\bterrible\b|\bawful\b|\bhorrible\b/gi, "not great");
-  result = result.replace(/\bsucks\b|\bgarbage\b|\bshit\b/gi, "isn't great");
-  result = result.replace(/\bwaste of time\b/gi, "could be more efficient");
-
-  if (mode === "full") result = "I see what you mean. Maybe we can put it this way: " + result;
-  if (mode === "sarcastic") result = "Sure. " + result + " Whatever you say.";
-  if (mode === "corporate") result = "From a collaborative standpoint, " + result.toLowerCase();
-  if (mode === "caffeine") result = result.replace(/\./g, "!") + "!";
-  if (mode === "minimal") {
-    const words = result.split(/\s+/);
-    result = words.slice(0, Math.min(6, words.length)).join(" ") + (words.length > 6 ? "..." : "");
-  }
-
-  result = result.replace(/\s+/g, " ").trim();
-  if (!/[.!?]$/.test(result)) result += ".";
-  return result.charAt(0).toUpperCase() + result.slice(1);
+// Lowercase, straighten phone-keyboard apostrophes, and expand common shortcuts.
+function normalize(text) {
+  return text.toLowerCase()
+    .replace(/[‘’ʼ′`´]/g, "'")
+    .replace(/\bdont\b/g, "don't")
+    .replace(/\bcant\b/g, "can't")
+    .replace(/\bdoesnt\b/g, "doesn't")
+    .replace(/\bisnt\b/g, "isn't")
+    .replace(/\byoure\b/g, "you're")
+    .replace(/\bthats\b/g, "that's")
+    .replace(/\bim\b/g, "i'm")
+    .replace(/\bwanna\b/g, "want to")
+    .replace(/\byou are\b/g, "you're")
+    .replace(/\bthat is\b/g, "that's")
+    .replace(/\bdo not\b/g, "don't")
+    .replace(/[^\S\n]+/g, " ");
 }
 
-function pick(mode, map) {
-  return map[mode] || map.full;
+function classify(original) {
+  const text = normalize(original);
+  if (SELF_HARM.test(text)) return "serious";
+
+  // Drop filler words so "you did a fucking amazing job" still reads as praise.
+  const clauses = text
+    .replace(/\b(?:fucking|fuckin|freaking|frickin|goddamn|really|very|totally|absolutely|completely|literally|actually|just|so|pretty)\b/g, "")
+    .split(/[.!?,;:\n]+|\bbut\b/)
+    .map((c) => c.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  for (const [category, patterns] of RULES) {
+    if (clauses.some((c) => patterns.some((p) => p.test(c)))) return category;
+  }
+  return "fallback";
+}
+
+let lastReply = "";
+
+function rephrase(original, mode) {
+  if (!original.trim()) return "";
+  const category = classify(original);
+  if (category === "serious") return SERIOUS;
+  const lines = REPLIES[category][mode] || REPLIES[category].full;
+  const fresh = lines.filter((line) => line !== lastReply);
+  lastReply = fresh[Math.floor(Math.random() * fresh.length)];
+  return lastReply;
 }
 
 function translate() {
-  console.log("Filtering...");
-  const text = input.value.trim();
-  output.textContent = text ? rephrase(text, modeSelect.value) : "";
+  output.textContent = rephrase(input.value, modeSelect.value);
 }
 
 translateBtn.addEventListener("click", translate);
@@ -317,20 +434,39 @@ input.addEventListener("keydown", (e) => {
   }
 });
 
+// Fallback for browsers that block the modern clipboard API.
+function legacyCopy(text) {
+  const box = document.createElement("textarea");
+  box.value = text;
+  box.setAttribute("readonly", "");
+  box.style.position = "fixed";
+  box.style.opacity = "0";
+  document.body.appendChild(box);
+  box.select();
+  box.setSelectionRange(0, text.length);
+  const ok = document.execCommand("copy");
+  box.remove();
+  return ok;
+}
+
+let copyTimer;
+
 copyBtn.addEventListener("click", async () => {
   const text = output.textContent;
   if (!text) return;
+  let ok = true;
   try {
     await navigator.clipboard.writeText(text);
-    copyBtn.textContent = "Copied!";
-    copyBtn.classList.add("copied");
-    setTimeout(() => {
-      copyBtn.textContent = "Copy";
-      copyBtn.classList.remove("copied");
-    }, 1500);
   } catch {
-    copyBtn.textContent = "Copied!";
+    ok = legacyCopy(text);
   }
+  copyBtn.textContent = ok ? "Copied!" : "Copy failed";
+  copyBtn.classList.toggle("copied", ok);
+  clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => {
+    copyBtn.textContent = "Copy";
+    copyBtn.classList.remove("copied");
+  }, 1500);
 });
 </script>
 </body>
