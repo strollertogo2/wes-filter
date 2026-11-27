@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wes Filter</title>
+<style>
+  :root {
+    --bg: #0f0f12;
+    --surface: #1a1a22;
+    --border: #2e2e3a;
+    --text: #f0f0f5;
+    --muted: #9a9aa8;
+    --accent: #7c6af7;
+    --accent-hover: #9b8cff;
+    --success: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 1.25rem 1.5rem 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    margin: 0.25rem 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .controls {
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  label { font-size: 0.85rem; color: var(--muted); }
+  select {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    min-width: 180px;
+    cursor: pointer;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+  .app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1rem 1.25rem 2rem;
+    gap: 1rem;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 180px;
+  }
+  .panel-header {
+    padding: 0.6rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  textarea, .output {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 1rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    resize: none;
+    font-family: inherit;
+  }
+  textarea:focus { outline: none; }
+  .output {
+    white-space: pre-wrap;
+    overflow-y: auto;
+    color: #e8e8f0;
+  }
+  .output:empty::before {
+    content: "Wes is waiting...";
+    color: var(--muted);
+    font-style: italic;
+  }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  button.secondary:hover { background: #252530; }
+  button.copied { background: var(--success); }
+  footer {
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 700px) {
+    .app { flex-direction: row; }
+    .panel { min-height: 320px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Wes Filter</h1>
+  <p>Type what you really mean. Get what you can actually say.</p>
+</header>
+
+<div class="controls">
+  <label for="mode">Wes Mode:</label>
+  <select id="mode">
+    <option value="mild">Mild Wes</option>
+    <option value="full" selected>Full Wes</option>
+    <option value="sarcastic">Sarcastic Wes</option>
+    <option value="corporate">Corporate Wes</option>
+    <option value="caffeine">Caffeine Wes</option>
+    <option value="minimal">Minimal Wes</option>
+  </select>
+  <button id="translateBtn">Filter It</button>
+</div>
+
+<div class="app">
+  <div class="panel">
+    <div class="panel-header">What you really want to say</div>
+    <textarea id="input" placeholder="Type the unfiltered version here..." autofocus></textarea>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span>Wes says</span>
+      <button id="copyBtn" class="secondary">Copy</button>
+    </div>
+    <div id="output" class="output"></div>
+  </div>
+</div>
+
+<footer>A gag app. The real Wes still has better judgment than this.</footer>
+
+<script>
+const input = document.getElementById('input');
+const output = document.getElementById('output');
+const modeSelect = document.getElementById('mode');
+const translateBtn = document.getElementById('translateBtn');
+const copyBtn = document.getElementById('copyBtn');
+
+// ===== Wes's lines. Edit these to make him sound like the real Wes. =====
+const REPLIES = {
+  brushoff: {
+    mild: ["I think we should probably wrap this up.", "Let's pick this up another time.", "I'm going to take a little breather."],
+    full: ["I should head out. Appreciate you taking the time.", "I'm going to step away for a bit. Talk soon.", "I think a little space would do us both some good."],
+    sarcastic: ["This has been great. We should do it again never.", "I'd love to stay, but I'd also love to leave.", "I'm going to go enjoy literally anywhere else."],
+    corporate: ["I need to step away to address another priority. Thank you.", "I propose we adjourn this discussion indefinitely.", "I have a hard stop, effective immediately."],
+    caffeine: ["Yeah I'm done with this. Bye!", "Gotta go, gotta go, gotta go!", "Love that for us. Leaving now!"],
+    minimal: ["I should go.", "Later.", "Heading out."]
+  },
+  silence: {
+    mild: ["Can I jump in with one thing?", "Mind if I finish my thought?", "Could we pause for just a second?"],
+    full: ["I'd like to add a quick thought before we move on.", "Let me finish this one, then I'm all ears.", "Can we take turns for a minute? I want to hear you after this."],
+    sarcastic: ["Sorry, did my sentence interrupt yours?", "No, keep going. I only had the one point.", "I'll wait. I've cleared my whole decade."],
+    corporate: ["If I may, I'd like to complete my deliverable sentence.", "Let's ensure equitable distribution of airtime.", "I'll yield the floor once I've had it."],
+    caffeine: ["Hold on hold on, my turn!", "Wait wait, I need to say something!", "Pause! Thought incoming!"],
+    minimal: ["Quick thought?", "One sec.", "May I?"]
+  },
+  meeting: {
+    mild: ["I think we could tighten this up a bit.", "Maybe we can keep this one short.", "Are we close to the finish line?"],
+    full: ["Should we check if we can cover the key points more efficiently?", "What do we still need to decide before we wrap?", "Could the rest of this go in a quick follow-up note?"],
+    sarcastic: ["I hope we schedule a meeting to discuss this meeting.", "I've aged beautifully during this call.", "Truly, an email could never capture this magic."],
+    corporate: ["I'd like to explore opportunities to optimize our time here.", "In the interest of bandwidth, let's take this offline.", "I propose we give everyone this hour back, retroactively."],
+    caffeine: ["Can we just get to the point?", "Action items! Now! Please!", "Could this be an email? Let's make it an email!"],
+    minimal: ["Can we wrap?", "Next steps?", "Email instead?"]
+  },
+  insult: {
+    mild: ["I think we're seeing this very differently.", "I'm a little frustrated, so give me a minute.", "That didn't go how I expected."],
+    full: ["I'm having a hard time with this. Can we reset?", "I think there may be a disconnect here. Can we talk it through?", "Let me take a breath before I respond to that."],
+    sarcastic: ["You're certainly one of a kind. Thankfully.", "I admire your confidence. Someone should.", "Never change. Science will want to study this."],
+    corporate: ["I see a significant opportunity for development here.", "I've noted some gaps between expectation and delivery. Mostly delivery.", "Let's schedule time to discuss professional growth. Yours."],
+    caffeine: ["Okay! Wow! Moving on!", "Deep breath! Big deep breath!", "I have feelings and they're all loud!"],
+    minimal: ["Hm.", "Let's reset.", "Interesting."]
+  },
+  badIdea: {
+    mild: ["I'm not sure that approach is going to land the way we want.", "I might want to think that one over.", "I have a small hesitation about that."],
+    full: ["I have some concerns about that direction. Mind if we look at a couple alternatives?", "Can we pressure-test that before we commit?", "I see where you're headed, but I'd like to weigh another option."],
+    sarcastic: ["What a brave thing to say out loud.", "Let's file that one somewhere very safe and far away.", "I love it, in the sense that I don't."],
+    corporate: ["Let's park that proposal. Long-term parking.", "I'd like to explore options that better align with our objectives.", "That approach may benefit from not being implemented."],
+    caffeine: ["Nope, don't think that works! Next idea!", "Ooh, pass! What else have we got?", "Let's brainstorm again, fast!"],
+    minimal: ["Not sure about that.", "Other options?", "Maybe not."]
+  },
+  food: {
+    mild: ["It's not really my thing.", "It's a little different from what I expected.", "I think I'm good for now."],
+    full: ["I'm not the biggest fan of this one.", "I might try somewhere else next time.", "It's not my favorite, but I appreciate the pick."],
+    sarcastic: ["You can really taste the decisions.", "I'll be thinking about this meal for all the wrong reasons.", "Compliments to whoever dared the chef."],
+    corporate: ["I see room for improvement in the culinary deliverables.", "I recommend we re-evaluate this vendor relationship.", "The product fell short of its stated value proposition."],
+    caffeine: ["This is not good! Coffee instead?", "Nope! Snack run!", "My taste buds filed a complaint!"],
+    minimal: ["Not for me.", "I'll pass.", "I'm full."]
+  },
+  indifferent: {
+    mild: ["I'm flexible on this.", "I don't have a strong preference.", "Either option works for me."],
+    full: ["Happy to go either way.", "I'll defer to you on this one.", "Whatever works best for you works for me."],
+    sarcastic: ["I'm on the edge of my seat, either way.", "Surprise me. I can barely contain myself.", "Both options fill me with the same nothing."],
+    corporate: ["I'm aligned with whatever the group selects.", "I have no material position on this item.", "I'll delegate full decision authority to literally anyone."],
+    caffeine: ["You pick! Quick!", "Any of them! All of them! Go!", "Coin flip! Let's move!"],
+    minimal: ["Either way.", "Your call.", "Sure."]
+  },
+  disagree: {
+    mild: ["I see it a little differently.", "I'm not sure I follow that.", "I had a different understanding."],
+    full: ["I might have a different take on this. Can I share it?", "Can you walk me through how you got there?", "I'm not quite with you on that one yet."],
+    sarcastic: ["Fascinating. Where did you find that one?", "I love how sure you sound.", "That's a fun theory. Tell it to a fact."],
+    corporate: ["Let's validate that assumption before proceeding.", "My data points in a materially different direction.", "I'm unable to reconcile that statement with available information."],
+    caffeine: ["Hmm, nope, don't think so!", "Wait, what? Let's double-check that!", "Gonna push back on that one!"],
+    minimal: ["I see it differently.", "Not quite.", "You sure?"]
+  },
+  dislike: {
+    mild: ["This isn't really my thing.", "I'm not completely sold.", "I could take it or leave it."],
+    full: ["I'm not the biggest fan, to be honest.", "This one's not for me, but I get the appeal.", "I'd probably go a different way if it were up to me."],
+    sarcastic: ["Oh, my favorite. Right after paper cuts.", "I'm feeling so many things, and joy isn't one.", "Wonderful. Put it with the other things I treasure."],
+    corporate: ["This doesn't fully align with my preferences.", "I'd like my reservations entered into the record.", "My engagement level on this item is trending downward."],
+    caffeine: ["Yeah, not into it!", "Hard pass! Friendly pass, but hard!", "Can we do literally anything else?"],
+    minimal: ["Not my thing.", "Pass.", "Meh."]
+  },
+  compliment: {
+    mild: ["That's nice.", "Good stuff.", "I like where that landed."],
+    full: ["Really nice work. I appreciate it.", "That turned out great. Well done.", "I'm impressed. Thanks for putting that in."],
+    sarcastic: ["Look at you, being all competent.", "Great. Now we'll expect this every time.", "I'm not crying. You're just doing adequately."],
+    corporate: ["Excellent contribution. This adds measurable value.", "Strong deliverable. I'll mention it at your review.", "This performance meets and occasionally exceeds expectations."],
+    caffeine: ["Yes!! Love it!!", "Amazing! High five! Both hands!", "Nailed it! Do it again!"],
+    minimal: ["Nice.", "Good work.", "Solid."]
+  },
+  frustrated: {
+    mild: ["I'm a bit confused by this.", "Well, that's unexpected.", "Give me a second with this one."],
+    full: ["Can you help me understand what's going on here?", "This is a frustrating one. Can we work through it?", "I need a minute, then let's figure it out."],
+    sarcastic: ["Oh good. This again.", "Couldn't have planned it better myself.", "Everything is going exactly how nobody wanted."],
+    corporate: ["I'd like to flag an emerging challenge.", "This presents an unscheduled learning opportunity.", "Let's escalate this before I escalate."],
+    caffeine: ["What is happening?! Okay! Fixing it!", "Nope nope nope! Regroup!", "I'm fine! Totally fine! Mostly!"],
+    minimal: ["Oh boy.", "Not ideal.", "Hm."]
+  },
+  excuses: {
+    mild: ["Maybe we can focus on what happens next.", "I'd love to find a fix for this.", "Let's see how we can avoid this next time."],
+    full: ["Let's focus on what will be different next time.", "I hear the reasons. What's the plan?", "I need a solution more than an explanation."],
+    sarcastic: ["Ooh, a new one. I was getting attached to the old ones.", "You should really publish a collection of these.", "Take your time. Quality fiction can't be rushed."],
+    corporate: ["Let's pivot from root-cause storytelling to accountability.", "I'd prefer to receive solutions in place of context.", "Your justification has been logged and not accepted."],
+    caffeine: ["Fix first! Explain never!", "Cool reason! What's the plan?!", "Less why, more how, go!"],
+    minimal: ["And the fix?", "Plan?", "Next time?"]
+  },
+  workload: {
+    mild: ["I think we should sort out who has what.", "I'm a bit stretched. Can we split this up?", "Could we check who's covering this one?"],
+    full: ["Let's get clear on who owns this.", "I can't take this one on. Who else can?", "I need us to share this more evenly."],
+    sarcastic: ["Apparently I've been promoted to your job too.", "Sure, I'll do it. Will you be forwarding the paycheck?", "I love doing two jobs. Said nobody."],
+    corporate: ["Let's clarify ownership of these responsibilities.", "That falls outside my current scope of work.", "My capacity to absorb adjacent duties is fully allocated."],
+    caffeine: ["Not my task! Whose task?! Tag them!", "Plate's full! Overflowing! Help!", "Split it up! Right now! Go team!"],
+    minimal: ["Who owns this?", "Not mine.", "Your turn."]
+  },
+  repeated: {
+    mild: ["Maybe I haven't explained it clearly. Can we go over it again?", "Let's walk through it one more time.", "Would it help if I wrote it down?"],
+    full: ["We've covered this a few times. Which part isn't coming across?", "This keeps coming up. Can we fix it for good?", "Let's find out why this keeps happening."],
+    sarcastic: ["Welcome back to another episode of the exact same explanation.", "I've said this so often it deserves a theme song.", "One more time, for the folks who were here every time."],
+    corporate: ["Despite multiple knowledge-transfer sessions, a comprehension gap remains.", "Per my previous message. And the one before that.", "This recurring item may require formal documentation."],
+    caffeine: ["Round four! Everybody ready?!", "Again! We're doing it again! Okay!", "Same thing, louder, faster, let's go!"],
+    minimal: ["Again?", "As before.", "Still?"]
+  },
+  impatience: {
+    mild: ["Whenever you're ready, no huge rush. Some rush.", "Could we pick up the pace a little?", "How's it coming along?"],
+    full: ["I'd appreciate it if we could move this along.", "What do you need to get this finished?", "I'm on a tight clock. Where do we stand?"],
+    sarcastic: ["No rush. I was planning to retire here anyway.", "Take your time. Take mine too.", "I've seen glaciers with more urgency."],
+    corporate: ["I'd appreciate an acceleration of the current timeline.", "Could you share a revised, and sooner, delivery date?", "This item is trending behind schedule."],
+    caffeine: ["Go go go!", "Tick tock tick tock!", "Faster! Love you! Faster!"],
+    minimal: ["Soon?", "ETA?", "Today?"]
+  },
+  boundary: {
+    mild: ["I'd rather keep that one to myself.", "I've got this, but thanks.", "Could I have a little room on this?"],
+    full: ["I'd like to handle this on my own.", "That's private, and I'd like to keep it that way.", "I need some space to work on this."],
+    sarcastic: ["Thank you for the advice I definitely requested.", "My business and I would like some alone time.", "You're so involved. Have you considered not being?"],
+    corporate: ["I'd benefit from greater operational autonomy.", "That matter is outside your area of oversight.", "Additional input isn't required at this stage."],
+    caffeine: ["Space! I need space! Lots of it!", "Nope, mine, private, bye!", "Got it handled! Hands off! Thanks!"],
+    minimal: ["Private.", "I've got it.", "Space, please."]
+  },
+  refusal: {
+    mild: ["I don't think I can do that one.", "I'm going to pass, but thanks for asking.", "That may not work for me."],
+    full: ["I'm not able to take that on.", "I have to say no to this one.", "That doesn't work for me. Can we find another way?"],
+    sarcastic: ["Let me check my calendar. Yep, it says never.", "What a fun offer. No.", "I'd rather alphabetize gravel."],
+    corporate: ["I'm unable to support that proposal at this time.", "This request falls outside a reasonable scope.", "I must respectfully decline in the strongest permitted terms."],
+    caffeine: ["Nope nope nope! Next!", "Hard no! Friendly no! Still no!", "Not happening! Great talk!"],
+    minimal: ["No, thanks.", "Pass.", "Can't."]
+  },
+  incompetence: {
+    mild: ["I think something got missed here.", "Can we look at how this one went?", "This didn't turn out quite right."],
+    full: ["This isn't meeting what we need. Let's talk about why.", "I expected a different result. What happened?", "Can we go over the basics of this together?"],
+    sarcastic: ["Your continued employment is a fascinating plot twist.", "So close. In a very distant sort of way.", "You had a task, and then something else happened."],
+    corporate: ["The outcome did not meet established expectations.", "Let's review the alignment between role and capabilities.", "I recommend a refresher on core responsibilities."],
+    caffeine: ["Whoa! What happened?! Redo!", "Not it! Not even close! Again!", "Okay! Back to basics! Quickly!"],
+    minimal: ["What happened?", "Redo?", "Hmm. No."]
+  },
+  ironic: {
+    mild: ["Well, that's not ideal.", "Oh. Okay then.", "That's a bit of a surprise."],
+    full: ["That's frustrating. Let's figure out what's next.", "Not what I was hoping for, but we'll manage.", "I'll admit I'm not thrilled about this."],
+    sarcastic: ["Magnificent. No notes.", "Oh, you shouldn't have. Truly. You shouldn't have.", "I was just thinking my day lacked this."],
+    corporate: ["I acknowledge this exciting new development.", "I'm pleased to report that I'm managing my enthusiasm.", "This is certainly an item we now have."],
+    caffeine: ["Yay! Hooray! Why!", "Love it! Hate it! Moving on!", "Amazing! Terrible! Next!"],
+    minimal: ["Lovely.", "Wow.", "Of course."]
+  },
+  mixed: {
+    mild: ["I like some of it, and I have one hesitation.", "There's something good here, with a catch.", "Nice start. One thing to sort out."],
+    full: ["I like where this is going, but I have a concern to work through.", "There's a lot to like. Can we talk about the sticking point?", "I'm partly on board. Let's solve the rest."],
+    sarcastic: ["Love it, apart from the part where it's a problem.", "So wonderful. So doomed. Let's discuss.", "A compliment, and now the fine print."],
+    corporate: ["I support this in principle, pending material concerns.", "Strong concept with notable implementation constraints.", "Directionally positive, with reservations to be addressed."],
+    caffeine: ["Yes! But! Wait! One thing!", "Love it! Also, problem!", "Great! Fix one thing! Go!"],
+    minimal: ["Yes, but.", "Almost.", "One catch."]
+  },
+  fallback: {
+    mild: ["Let me think about that.", "That's something to consider.", "I hear you.", "Could be."],
+    full: ["That's a fair thing to bring up. Let me give it some thought.", "I appreciate you sharing that.", "Good to know. Can we come back to it?", "I can see why that's on your mind."],
+    sarcastic: ["Wow. Tell me absolutely everything.", "And you came to me with this. I'm honored.", "Noted, in my finest imaginary notebook.", "What a time to be alive."],
+    corporate: ["Thank you for surfacing that.", "I'll take that under indefinite advisement.", "Let's circle back, ideally never.", "Noted. I'll action that as appropriate."],
+    caffeine: ["Yep! Got it! Moving!", "Love it, noted, next!", "Okay! Cool! What else?", "Sure thing! Zoom zoom!"],
+    minimal: ["Noted.", "Got it.", "Okay.", "Sure."]
+  }
+};
+
+// Shown instead of a joke if the text sounds like real self-harm.
+const SERIOUS = "No joke for this one. If you're thinking about hurting yourself, call or text 988 (US) or reach out to someone you trust right now.";
+
+// ===== Matching rules =====
+const NEG = "(?:idiotic|stupid|dumb|moronic|garbage|trash|shit|shitty|terrible|awful|horrible|bad|worst|ridiculous|crap|crappy|pointless|useless|lousy)";
+const NOUN = "(?:idea|suggestion|plan|take|approach|proposal)";
+const POS = "(?:great|amazing|awesome|excellent|fantastic|good|nice|brilliant|perfect|wonderful|incredible|outstanding)";
+const INS = "(?:idiots?|morons?|dumbass(?:es)?|stupid|dumb|jerks?|assholes?|useless|annoying|ridiculous|clueless|incompetent|losers?|the worst)";
+const LEAD = "^(?:(?:please|oh|hey|ok|okay|now|seriously|dude|man|bro|and|can you|could you|will you|would you|why don't you|you can|you should|you need to|go ahead and) )*";
+
+const rx = (source) => new RegExp(source);
+
+// Checked top to bottom; each clause takes the first category that matches it.
+// A rule written as [match, exception] is ignored when the exception also matches.
+// No regex lookbehind: older iPhones can't parse it and the whole script would fail.
+const TAIL = "(?: (?:now|please|already|forever|for good|dude|man|bro))?(?:$| and\\b)";
+const RULES = [
+  ["brushoff", [
+    rx(LEAD + "(?:fuck off|piss off|screw you|fuck you|leave me alone|go die|drop dead|kill yourself)\\b"),
+    rx(LEAD + "(?:go away|get lost|disappear)" + TAIL),
+    rx(LEAD + "get out(?: of (?:here|my \\w+))?(?: now| please)?$"),
+    /\bi (?:wish|hope) you(?:'d| would| will)? (?:disappear|die|leave|go away)\b/
+  ]],
+  ["silence", [
+    rx(LEAD + "(?:shut up(?! and take)|shut it|stop talking|stop interrupting|be quiet|zip it|let me (?:talk|speak|finish))\\b"),
+    rx(LEAD + "quiet(?: down)?(?: please)?$"),
+    /\byou talk too much\b/,
+    /\byou keep (?:interrupting|talking over)\b/
+  ]],
+  ["excuses", [
+    /\b(?:tired|sick) of (?:your |the |these |all (?:your |the )?)?excuses\b/,
+    /\b(?:stop making|no more|enough with the|spare me(?: the| your)?) excuses?\b/,
+    /^no excuses$/,
+    /\balways (?:have|has|got) an excuse\b/,
+    /\bi (?:hate|can't stand) (?:your |these |the )?excuses\b/,
+    /\b(?:lame|weak|pathetic|bad) excuse\b/,
+    /\b(?:that's|this is) (?:an |another |a )excuse\b/
+  ]],
+  ["workload", [
+    /\b(?:i'm not|i am not|i won't be) doing your (?:damn )?(?:job|work)\b/,
+    /\bdo your (?:own )?(?:damn )?(?:own )?(?:job|work)\b/,
+    /\bdo it (?:your ?self)\b/,
+    /\b(?:that's|it's) not my (?:damn )?job\b/,
+    /\b(?:fixing|cleaning up|redoing) (?:your|his|her|their|everyone's) (?:damn )?(?:mistakes?|mess(?:es)?|work)\b/,
+    /\bdumping (?:this|that|it|everything|your work) on me\b/,
+    /\bwhy (?:do i|am i) (?:have to do|doing|the only one doing) (?:everything|all)\b/,
+    /\btoo much (?:work|on my plate)\b/
+  ]],
+  ["repeated", [
+    /\bhow many (?:more )?times (?:do|did|have|must|should|will|am) (?:i|we)\b/,
+    /\bi told you (?:this|that|it)\b/,
+    /\bi(?:'ve| have)? (?:already )?(?:told|explained|said|asked|showed|shown)\b.*\b(?:times|already|before|twice)\b/,
+    /\bi already (?:told|explained|said|asked|showed)\b/,
+    /\bspell (?:it|this|that) out\b/,
+    /\b(?:you|how do you) still (?:don't|not) (?:understand|get)\b/,
+    /\b(?:same mistake|not this again|here we go again)\b/,
+    /\byou keep (?:doing|making|forgetting|asking|messing|breaking)\b/
+  ]],
+  ["incompetence", [
+    /\bhow (?:are|is) (?:you|he|she) still (?:employed|working here)\b/,
+    /\bhow do(?:es)? (?:you|he|she) still have a job\b/,
+    /\byou had (?:one|1) job\b/,
+    /\b(?:you|he|she|they) (?:can't|couldn't) (?:even )?do (?:this|that|it|anything) right\b/,
+    /\b(?:can't|couldn't) you (?:even )?do (?:this|that|it|anything) right\b/,
+    /\bwho hired (?:you|him|her|this)\b/,
+    /\b(?:you're|he's|she's|they're) (?:bad|terrible|awful|useless|hopeless) at\b/,
+    /\b(?:you|he|she|they) (?:messed|screwed|fucked) (?:this|that|it|everything) up\b/,
+    /\b(?:you|he|she|they) ruined\b/
+  ]],
+  ["meeting", [
+    /\b(?:meeting|call|zoom)\b.{0,20}?(?:\b(?:is|was)|'s) (?:a )?(?:waste|pointless|useless|stupid|dumb|boring|too long)\b/,
+    /\b(?:meeting|call|zoom) sucks\b/,
+    [/\bwaste of (?:my |our |everyone's |everybody's )?time\b/, /(?:\bnot|n't) (?:a )?waste of\b/],
+    /\bcould(?:'ve| have) been an email\b/,
+    /\bi (?:hate|can't stand) (?:this|these) (?:meetings?|calls?)\b/
+  ]],
+  ["impatience", [
+    /\bhurry (?:(?:the (?:hell|fuck)|it|this|that) )?up\b/,
+    /\b(?:what's|what is) taking (?:you )?(?:long|forever)\b/,
+    /\b(?:is|this is|it's|you're) taking forever\b/,
+    /\b(?:are you done yet|any day now|get on with it|speed it up|don't have all day)\b/,
+    /\bi (?:hate|can't stand|'m tired of) waiting\b/,
+    /\b(?:i|we)(?:'ve| have) been waiting (?:forever|for)\b/
+  ]],
+  ["boundary", [
+    /\b(?:mind your own|none of your) (?:damn )?business\b/,
+    /\b(?:get off my back|stay out of (?:it|this|my \w+))\b/,
+    rx(LEAD + "back off\\b"),
+    /\bstop (?:micromanaging|bothering me|hovering)\b/,
+    /\bnobody asked\b/,
+    /\bleave my \w+ alone\b/,
+    /\bdidn't ask (?:for )?(?:you|your (?:opinion|advice))\b/
+  ]],
+  ["badIdea", [
+    [rx("\\b" + NEG + " " + NOUN + "\\b"), rx("\\bnot (?:a |an )?" + NEG + " " + NOUN)],
+    rx("\\b" + NOUN + "(?: is|'s| was| sounds| seems) (?:a |an )?(?:" + NEG + "|joke)\\b"),
+    rx("\\b" + NOUN + " (?:sucks|stinks)\\b"),
+    rx("(?:\\bnot|n't) (?:a |the )?(?:good|great|best|smart) " + NOUN + "\\b"),
+    rx("\\b" + NOUN + "(?: is not| isn't|'s not| wasn't) (?:very )?(?:good|great|smart)\\b"),
+    rx("\\bi (?:hate|don't like|can't stand|don't love) (?:this|that|your|the|his|her|their) (?:new )?" + NOUN + "\\b")
+  ]],
+  ["food", [
+    rx("\\b(?:food|meal|restaurant|place|dinner|lunch|breakfast|coffee|dish|pizza|burger)\\b.{0,15}?(?:(?:\\b(?:is|was|tastes|tasted|smells)|'s) (?:like )?(?:" + NEG + "|gross|disgusting|nasty)\\b|\\bsuck(?:s|ed)\\b)"),
+    rx("\\b(?:this|it) (?:tastes|tasted|smells) (?:like )?(?:" + NEG + "|gross|disgusting|nasty)\\b")
+  ]],
+  ["insult", [
+    rx("\\b(?:you|you're|you look|you sound|he's|she's|they're|he is|she is|they are) (?:a |an |such a |such an |being )?" + INS + "\\b"),
+    rx("\\b(?:what an?|bunch of) (?:idiots?|morons?|jerks?|assholes?|losers?)\\b"),
+    /^(?:you )?(?:idiot|moron|dumbass|asshole)s?$/,
+    /\byou (?:absolute |total |complete )?(?:clown|muppet|donkey)\b/
+  ]],
+  ["indifferent", [
+    /\bi (?:don't|do not) care\b(?! for)/,
+    /\bcouldn't care less\b/,
+    /\bdon't give a (?:shit|damn|fuck|crap)\b/,
+    /\b(?:doesn't matter|who cares|not my problem)\b/,
+    /^(?:ok |okay |yeah |eh )?whatever$/
+  ]],
+  ["refusal", [
+    /\b(?:not a chance|hell no|over my dead body|fat chance|i refuse|out of your mind)\b/,
+    /\b(?:not happening|no way in hell|no way am i|no way i'm)\b/,
+    /^(?:no way|absolutely not|forget it)$/,
+    /\b(?:i'm not|i am not|i won't|i will not) (?:doing|do) (?:that|this|it)\b/
+  ]],
+  ["disagree", [
+    /\b(?:you're|that's|this is|it's) (?:wrong|stupid|dumb|ridiculous|nonsense|false|bullshit|bs|not (?:right|true|correct))\b/,
+    /\byou're full of (?:shit|it|crap)\b/,
+    /\bi disagree\b/,
+    /\b(?:makes no sense|doesn't make (?:any )?sense)\b/,
+    /\bdon't know what you're talking about\b/,
+    /^bullshit$/
+  ]],
+  ["dislike", [
+    /\bi (?:hate|can't stand|despise|loathe|don't like|don't love|don't care for) (?!to say)\w+/,
+    /\bi'm (?:sick|tired) of \w+/,
+    /\b(?:this|that|it) (?:sucks|stinks)\b/,
+    rx("\\b(?:this|that|it)(?: is|'s| was) (?:" + NEG + "|boring|not (?:good|great))\\b")
+  ]],
+  ["compliment", [
+    /\bnot (?:a )?bad\b/,
+    rx("\\b(?:you're|you are|you were|you look|that's|this is|it's|that was|it was) (?:a |an )?" + POS + "\\b"),
+    [rx("^(?!(?:is|are|was|would|do|does|did|can|could|should|if|how is)\\b).*\\b" + POS + " (?:job|work|idea|call|plan|point)\\b"),
+     rx("(?:\\bnot|n't|\\bno) (?:a |an )?" + POS + " (?:job|work|idea|call|plan|point)\\b")],
+    rx("\\b(?:your|that|this|the) (?:idea|plan|work|food|meal) (?:is|was) " + POS + "\\b"),
+    /\bi (?:love|loved|like|liked) (?:you|this|that|it|your)\b/,
+    /^(?:love it|well done|way to go)\b/
+  ]],
+  ["frustrated", [
+    /\b(?:fuck\w*|shit\w*|wtf|what the hell|bullshit|damn it|dammit|crap|are you kidding)\b/
+  ]]
+];
+
+// Sarcasm that only shows across the whole message, e.g. "Oh great, another meeting".
+const IRONIC = [
+  /^(?:oh|ah|well)[ ,]+(?:great|wonderful|fantastic|perfect|awesome|lovely|joy)\b(?! (?:job|work|idea))/,
+  /\b(?:great|perfect|wonderful|fantastic|awesome|lovely)[ ,.!]+(?:now (?:it|it's|we|i|this)|another|just what)\b/,
+  /\bi (?:just )?love how\b.*\b(?:ruined|broke|broken|messed|screwed|forgot|never|nobody)\b/,
+  /\b(?:thanks for nothing|just what i needed|love to see you try)\b/
+];
+
+// Clauses that report or deny a remark instead of making it.
+const NOT_MINE = /\b(?:never said|didn't say|not saying|not calling|(?:told|asked) (?:me|us|him|her|them) to)\b/;
+
+// Two of these in one message get answered together.
+const COMPLAINTS = ["silence", "excuses", "workload", "repeated", "incompetence", "meeting", "impatience", "boundary", "badIdea", "food", "insult", "disagree", "dislike"];
+
+const SELF_HARM = /\b(?:kill(?:ing)? myself|end(?:ing)? my (?:own )?life|hurt(?:ing)? myself|i (?:want|need) to die|don't want to (?:live|be alive)|i'm suicidal)\b/;
+
+// Lowercase, straighten phone-keyboard apostrophes, and expand common shortcuts.
+function normalize(text) {
+  return text.toLowerCase()
+    .replace(/[‘’ʼ′`´]/g, "'")
+    .replace(/\bdont\b/g, "don't")
+    .replace(/\bcant\b/g, "can't")
+    .replace(/\bdoesnt\b/g, "doesn't")
+    .replace(/\bisnt\b/g, "isn't")
+    .replace(/\byoure\b/g, "you're")
+    .replace(/\bthats\b/g, "that's")
+    .replace(/\bim\b/g, "i'm")
+    .replace(/\bwanna\b/g, "want to")
+    .replace(/\byou are\b/g, "you're")
+    .replace(/\bthat is\b/g, "that's")
+    .replace(/\bdo not\b/g, "don't")
+    .replace(/[^\S\n]+/g, " ");
+}
+
+const hits = (rule, clause) =>
+  Array.isArray(rule) ? rule[0].test(clause) && !rule[1].test(clause) : rule.test(clause);
+
+function toClauses(text) {
+  // Drop filler words so "you did a fucking amazing job" still reads as praise.
+  return text
+    .replace(/\b(?:fucking|fuckin|freaking|frickin|goddamn|really|very|totally|absolutely(?! not)|completely|literally|actually|just|so|pretty)\b/g, "")
+    .split(/[.!?,;:\n]+|\bbut\b|\bhowever\b| and (?=(?:you|you're|your|this|that|i|i'm) )/)
+    .map((c) => c.replace(/\s+/g, " ").trim())
+    .filter((c) => c && !NOT_MINE.test(c));
+}
+
+function categoryOf(clause) {
+  const rule = RULES.find(([, patterns]) => patterns.some((p) => hits(p, clause)));
+  return rule ? rule[0] : null;
+}
+
+// Returns one category, or two when the message holds two separate complaints.
+function detect(original) {
+  const text = normalize(original);
+  if (SELF_HARM.test(text)) return ["serious"];
+
+  const order = RULES.map(([name]) => name);
+  const found = [...new Set(toClauses(text).map(categoryOf).filter(Boolean))]
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+
+  // Direct hostility outranks sarcasm; sarcasm outranks everything else.
+  const hostile = ["brushoff", "silence", "insult"].some((c) => found.includes(c));
+  if (!hostile && IRONIC.some((p) => p.test(text.trim()))) return ["ironic"];
+
+  // "I like it, but ..." is praise with a reservation, not plain praise.
+  if (found[0] === "compliment") {
+    const parts = text.split(/\bbut\b|\bhowever\b/);
+    const later = toClauses(parts.slice(1).join(" "));
+    if (parts.length > 1 && later.length && !later.some((c) => categoryOf(c) === "compliment")) return ["mixed"];
+  }
+
+  if (!found.length) return ["fallback"];
+  const complaints = found.filter((c) => COMPLAINTS.includes(c));
+  if (COMPLAINTS.includes(found[0]) && complaints.length > 1) return complaints.slice(0, 2);
+  return [found[0]];
+}
+
+const lastReply = {};
+
+function pick(category, mode) {
+  const lines = REPLIES[category][mode] || REPLIES[category].full;
+  const fresh = lines.filter((line) => line !== lastReply[category]);
+  lastReply[category] = fresh[Math.floor(Math.random() * fresh.length)];
+  return lastReply[category];
+}
+
+function rephrase(original, mode) {
+  if (!original.trim()) return "";
+  const found = detect(original);
+  if (found[0] === "serious") return SERIOUS;
+  // Minimal Wes only ever answers one thing.
+  return found.slice(0, mode === "minimal" ? 1 : 2).map((c) => pick(c, mode)).join(" ");
+}
+
+function translate() {
+  output.textContent = rephrase(input.value, modeSelect.value);
+}
+
+translateBtn.addEventListener("click", translate);
+modeSelect.addEventListener("change", () => { if (input.value.trim()) translate(); });
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    translate();
+  }
+});
+
+// Fallback for browsers that block the modern clipboard API.
+function legacyCopy(text) {
+  const box = document.createElement("textarea");
+  box.value = text;
+  box.setAttribute("readonly", "");
+  box.style.position = "fixed";
+  box.style.opacity = "0";
+  document.body.appendChild(box);
+  box.select();
+  box.setSelectionRange(0, text.length);
+  const ok = document.execCommand("copy");
+  box.remove();
+  return ok;
+}
+
+let copyTimer;
+
+copyBtn.addEventListener("click", async () => {
+  const text = output.textContent;
+  if (!text) return;
+  let ok = true;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    ok = legacyCopy(text);
+  }
+  copyBtn.textContent = ok ? "Copied!" : "Copy failed";
+  copyBtn.classList.toggle("copied", ok);
+  clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => {
+    copyBtn.textContent = "Copy";
+    copyBtn.classList.remove("copied");
+  }, 1500);
+});
+</script>
+</body>
+</html>
